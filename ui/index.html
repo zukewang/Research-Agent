@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Research Assistant</title>
+    <!-- Favicon -->
+    <link rel="icon" href="/static/research.ico" type="image/x-icon" />
+    <link rel="stylesheet" href="/static/style.css">
+
+    <!-- Custom Styles -->
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f9fafb;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .app-container {
+            display: flex;
+            height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 260px;
+            background: white;
+            border-right: 1px solid #e5e7eb;
+            display: flex;
+            flex-direction: column;
+            padding: 1rem 0;
+        }
+
+        .sidebar-header {
+            padding: 0 1rem 1rem;
+            border-bottom: 1px solid #eee;
+        }
+
+        .sidebar-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #4b5563;
+            margin-bottom: 0.5rem;
+        }
+
+        .new-chat-btn {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-left: 0.5rem;
+            align-self: flex-end;
+        }
+
+        .new-chat-btn:hover {
+            background: #2563eb;
+        }
+
+        .history-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0 0.5rem;
+        }
+
+        .history-item {
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.875rem;
+            color: #1f2937;
+            margin: 0.25rem 0;
+        }
+
+        .history-item:hover {
+            background-color: #f3f4f6;
+        }
+
+        .history-item.active {
+            background-color: #dbeafe;
+        }
+
+        .history-title {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .history-time {
+            font-size: 0.75rem;
+            color: #9ca3af;
+            margin-left: 0.5rem;
+        }
+
+        .delete-btn {
+            background: none;
+            border: none;
+            font-size: 1rem;
+            color: #9ca3af;
+            cursor: pointer;
+            padding: 0.25rem;
+            margin-left: 0.5rem;
+        }
+
+        .delete-btn:hover {
+            color: #ef4444;
+        }
+
+        /* Main Chat Area */
+        .main-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            padding: 1rem 1.5rem;
+            background: white;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #111827;
+        }
+
+        .chat-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .message-bubble {
+            max-width: 80%;
+            padding: 0.75rem 1rem;
+            border-radius: 1rem;
+            line-height: 1.5;
+            position: relative;
+            word-wrap: break-word;
+        }
+
+        .user-bubble {
+            background: #e0f2fe;
+            align-self: flex-end;
+            border-bottom-right-radius: 0.25rem;
+        }
+
+        .agent-bubble {
+            background: #ffffff;
+            align-self: flex-start;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.75rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            padding: 1rem;
+            font-size: 0.95rem;
+            color: #1f2937;
+        }
+
+        .agent-bubble p {
+            margin: 0.75rem 0;
+            line-height: 1.6;
+        }
+
+        .agent-bubble h2 {
+            margin-top: 1rem;
+            margin-bottom: 0.5rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #1f2937;
+            border-bottom: 1px solid #e5e7eb;
+            padding-bottom: 0.25rem;
+        }
+
+        .agent-bubble ul {
+            margin: 0.75rem 0;
+            padding-left: 1.25rem;
+        }
+
+        .agent-bubble a {
+            color: #3b82f6;
+            text-decoration: underline;
+            font-weight: 500;
+        }
+
+        .agent-bubble a:hover {
+            text-decoration: none;
+        }
+
+        .copy-btn {
+            background: #e5e7eb;
+            border: 1px solid #d1d5da;
+            border-radius: 0.25rem;
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+            cursor: pointer;
+            margin-top: 0.5rem;
+            display: inline-block;
+        }
+
+        .copy-btn:hover {
+            background: #d1d5da;
+        }
+
+        .input-area {
+            padding: 1rem 1.5rem;
+            background: white;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .input-container {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        #userInput {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            border: 1px solid #d1d5da;
+            border-radius: 1.5rem;
+            font-size: 0.875rem;
+            outline: none;
+        }
+
+        #userInput:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        #sendBtn {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.25rem;
+            border-radius: 1.5rem;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        #sendBtn:hover {
+            background: #2563eb;
+        }
+
+        /* Scrollbar */
+        .chat-container::-webkit-scrollbar,
+        .history-list::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .chat-container::-webkit-scrollbar-thumb,
+        .history-list::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar: History -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-title">Chat History</div>
+                <button id="newChatBtn" class="new-chat-btn">New Chat</button>
+            </div>
+            <div id="historyList" class="history-list"></div>
+        </aside>
+
+        <!-- Main Chat Area -->
+        <main class="main-area">
+            <header class="header">
+                <h1 class="header-title">Research Assistant</h1>
+            </header>
+
+            <div id="chatBox" class="chat-container"></div>
+
+            <div class="input-area">
+                <div class="input-container">
+                    <input
+                        type="text"
+                        id="userInput"
+                        placeholder="Ask about papers or experiments..."
+                    />
+                    <button id="sendBtn">Send</button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- External Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/markdown-it@13.0.1/dist/markdown-it.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/markdown-it-emoji@9.0.0/dist/markdown-it-emoji.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked@4.0.0/marked.min.js"></script>
+
+    <!-- Main Logic -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Initialize markdown-it with emoji plugin
+            let md;
+            try {
+                if (typeof window.markdownit !== 'function') {
+                    throw new Error('markdown-it not loaded');
+                }
+                if (typeof window.markdownitEmoji !== 'function') {
+                    throw new Error('markdown-it-emoji not loaded');
+                }
+                md = window.markdownit({
+                    html: true,
+                    linkify: true,
+                    breaks: true,
+                    typographer: true
+                }).use(window.markdownitEmoji);
+            } catch (e) {
+                console.warn('Markdown setup failed:', e.message);
+                md = { render: text => text.replace(/\n/g, '<br>') };
+            }
+
+            // DOM Elements
+            const chatBox = document.getElementById('chatBox');
+            const userInput = document.getElementById('userInput');
+            const sendBtn = document.getElementById('sendBtn');
+            const newChatBtn = document.getElementById('newChatBtn');
+            const historyList = document.getElementById('historyList');
+
+            if (!chatBox || !userInput || !sendBtn || !historyList) {
+                console.error('❌ Critical DOM elements missing!');
+                return;
+            }
+
+            // State
+            let currentSessionId = null;
+            const sessions = new Map();
+
+            // Utilities
+            function scrollToBottom() {
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }
+
+            function formatTime(date) {
+                const now = new Date();
+                const isToday = date.toDateString() === now.toDateString();
+                return isToday
+                    ? date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                    : date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+            }
+
+            function addMessageToDOM(text, sender) {
+                const div = document.createElement('div');
+                div.className = `message-bubble ${sender}-bubble`;
+
+                if (sender === 'agent') {
+                    // 创建 prose 容器
+                    const proseDiv = document.createElement('div');
+                    proseDiv.className = 'prose prose-sm max-w-none dark:prose-invert';
+                    
+                    // 渲染 Markdown
+                    proseDiv.innerHTML = md.render(String(text));
+                    
+                    // 添加复制按钮
+                    proseDiv.querySelectorAll('pre').forEach(pre => {
+                    const copyBtn = document.createElement('button');
+                    copyBtn.textContent = '📋 Copy';
+                    copyBtn.className = 'copy-btn mt-2'; // 添加 margin-top
+                    copyBtn.onclick = () => {
+                        const codeText = pre.querySelector('code')?.textContent || pre.innerText;
+                        navigator.clipboard.writeText(codeText).then(() => {
+                        Swal.fire({ title: 'Copied!', timer: 1000, showConfirmButton: false, icon: 'success' });
+                        });
+                    };
+                    pre.parentNode.insertBefore(copyBtn, pre.nextSibling);
+                    });
+
+                    div.appendChild(proseDiv);
+                } else {
+                    div.textContent = text;
+                }
+
+                chatBox.appendChild(div);
+                scrollToBottom();
+            }
+
+            function addMessage(text, sender) {
+                addMessageToDOM(text, sender);
+
+                if (currentSessionId && sessions.has(currentSessionId)) {
+                    const role = sender === 'user' ? 'user' : 'assistant';
+                    sessions.get(currentSessionId).messages.push({ role, content: text });
+
+                    const msgs = sessions.get(currentSessionId).messages;
+                    if (role === 'user' && msgs.length === 2) {
+                        const shortTitle = text.length > 25 ? text.substring(0, 25) + '...' : text;
+                        sessions.get(currentSessionId).title = shortTitle;
+                        renderHistoryList();
+                    }
+                }
+            }
+
+            function createNewSession() {
+                const sessionId = Date.now().toString();
+                sessions.set(sessionId, {
+                    title: "New Chat",
+                    timestamp: new Date(),
+                    messages: [
+                        { role: "assistant", content: "Hello! I'm your research assistant. Ask me about papers or experiments! 🧪📄" }
+                    ]
+                });
+
+                currentSessionId = sessionId;
+                loadSession(sessionId);
+                renderHistoryList();
+            }
+
+            function loadSession(sessionId) {
+                currentSessionId = sessionId;
+                const session = sessions.get(sessionId);
+                if (!session) return;
+
+                chatBox.innerHTML = '';
+                session.messages.forEach(msg => {
+                    const sender = msg.role === 'user' ? 'user' : 'agent';
+                    addMessageToDOM(msg.content, sender);
+                });
+            }
+
+            function deleteSession(sessionId) {
+                if (!sessions.has(sessionId)) return;
+
+                if (currentSessionId === sessionId) {
+                    const otherSessions = Array.from(sessions.keys()).filter(id => id !== sessionId);
+                    if (otherSessions.length > 0) {
+                        loadSession(otherSessions[0]);
+                    } else {
+                        createNewSession();
+                    }
+                }
+
+                sessions.delete(sessionId);
+                renderHistoryList();
+            }
+
+            function renderHistoryList() {
+                historyList.innerHTML = '';
+
+                const sortedSessions = Array.from(sessions.entries())
+                    .sort((a, b) => b[1].timestamp - a[1].timestamp);
+
+                sortedSessions.forEach(([id, session]) => {
+                    const item = document.createElement('div');
+                    item.className = `history-item ${id === currentSessionId ? 'active' : ''}`;
+
+                    const content = document.createElement('div');
+                    content.className = 'history-title';
+                    content.textContent = session.title;
+
+                    const time = document.createElement('span');
+                    time.className = 'history-time';
+                    time.textContent = formatTime(session.timestamp);
+
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'delete-btn';
+                    deleteBtn.innerHTML = '🗑️';
+                    deleteBtn.onclick = (e) => {
+                        e.stopPropagation();
+                        if (confirm('Delete this conversation?')) deleteSession(id);
+                    };
+
+                    item.appendChild(content);
+                    item.appendChild(time);
+                    item.appendChild(deleteBtn);
+
+                    item.onclick = (e) => {
+                        if (e.target !== deleteBtn) loadSession(id);
+                    };
+
+                    historyList.appendChild(item);
+                });
+            }
+
+            async function sendMessage() {
+                const message = userInput.value.trim();
+                if (!message) return;
+
+                addMessage(message, 'user');
+                userInput.value = '';
+
+                const thinkingDiv = document.createElement('div');
+                thinkingDiv.className = 'message-bubble agent-bubble';
+                thinkingDiv.textContent = '🤔 Thinking...';
+                thinkingDiv.id = 'thinking';
+                chatBox.appendChild(thinkingDiv);
+                scrollToBottom();
+
+                try {
+                    const currentMessages = sessions.get(currentSessionId)?.messages || [];
+                    const response = await fetch('/chat', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ history: currentMessages })
+                    });
+                    const data = await response.json();
+                    
+                    document.getElementById('thinking')?.remove();
+                    addMessage(data.response, 'agent');
+                } catch (error) {
+                    console.error('Fetch error:', error);
+                    document.getElementById('thinking')?.remove();
+                    addMessage("❌ Failed to get response.", 'agent');
+                }
+            }
+
+            // Event Listeners
+            sendBtn.addEventListener('click', sendMessage);
+            userInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') sendMessage();
+            });
+            newChatBtn.addEventListener('click', createNewSession);
+
+            // Start
+            createNewSession();
+        });
+    </script>
+</body>
+</html>

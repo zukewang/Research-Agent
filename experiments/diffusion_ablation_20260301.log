@@ -1,0 +1,9 @@
+[2026-03-01T23:57:46.342313] Starting experiment: Denoising Diffusion Probabilistic Models
+Config: epochs=100, lr=1e-4, batch_size=32
+Epoch 1: loss=1.95
+Epoch 2: loss=1.9
+Epoch 3: loss=1.85
+Epoch 4: loss=1.8
+Error: CUDA out of memory!
+Traceback (most recent call last):
+  File "train.py", line 120, in <module>

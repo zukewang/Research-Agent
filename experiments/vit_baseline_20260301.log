@@ -1,0 +1,9 @@
+[2026-03-01T23:57:46.341586] Starting experiment: Vision Transformer
+Config: epochs=50, lr=1e-4, batch_size=32
+Epoch 10/50: loss=1.7, acc=0.25
+Epoch 20/50: loss=1.4, acc=0.4
+Epoch 30/50: loss=1.1, acc=0.55
+Epoch 40/50: loss=0.8, acc=0.7
+Epoch 50/50: loss=0.5, acc=0.85
+Training completed.
+Final accuracy: 85.0%

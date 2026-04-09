@@ -1,0 +1,12 @@
+[2026-03-01T23:57:46.347454] Starting experiment: Large Language Model Fine-tuning
+Config: epochs=200, lr=1e-4, batch_size=32
+Epoch 1/200: loss=1.95, acc=0.12
+Epoch 2/200: loss=1.9, acc=0.14
+Epoch 3/200: loss=1.85, acc=0.16
+Epoch 4/200: loss=1.8, acc=0.18
+Epoch 5/200: loss=1.75, acc=0.2
+Epoch 6/200: loss=1.7, acc=0.22
+Epoch 7/200: loss=1.65, acc=0.24
+Epoch 8/200: loss=1.6, acc=0.26
+Epoch 9/200: loss=1.55, acc=0.28
+Epoch 10/200: loss=1.5, acc=0.3
