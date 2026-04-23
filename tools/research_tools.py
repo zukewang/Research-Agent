@@ -7,6 +7,56 @@ import glob
 from pathlib import Path
 from typing import Dict, Any
 from datetime import datetime
+from sentence_transformers import SentenceTransformer
+
+class ExperimentRAG:
+    def __init__(self, log_dir: Path):
+        self.log_dir = log_dir
+        self.model = SentenceTransformer('all-MiniLM-L6-v2')
+        self.documents = []
+        self.embeddings = None
+        self._load_and_index_logs()
+    
+    def _load_and_index_logs(self):
+        """加载所有实验日志并创建向量索引"""
+        log_files = list(self.log_dir.glob("*.log"))
+        for log_file in log_files:
+            try:
+                with open(log_file, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                    # 提取关键信息作为文档
+                    doc = {
+                        'filename': log_file.name,
+                        'content': content,
+                        'last_modified': datetime.fromtimestamp(log_file.stat().st_mtime).isoformat()
+                    }
+                    self.documents.append(doc)
+            except Exception as e:
+                print(f"Error reading {log_file}: {e}")
+        
+        if self.documents:
+            # 创建文档文本用于嵌入
+            doc_texts = [f"Experiment: {doc['filename']}\n{doc['content'][-1000:]}" 
+                        for doc in self.documents]
+            self.embeddings = self.model.encode(doc_texts)
+    
+    def retrieve(self, query: str, top_k: int = 3) -> List[Dict]:
+        """基于语义相似度检索相关实验"""
+        if not self.documents or self.embeddings is None:
+            return []
+        
+        query_embedding = self.model.encode([query])
+        similarities = np.dot(self.embeddings, query_embedding.T).flatten()
+        top_indices = np.argsort(similarities)[-top_k:][::-1]
+        
+        results = []
+        for idx in top_indices:
+            if similarities[idx] > 0.3:  # 相似度阈值
+                results.append({
+                    'document': self.documents[idx],
+                    'similarity': float(similarities[idx])
+                })
+        return results
 
 
 def check_log_dir() -> Dict[str, Any]:
@@ -117,89 +167,19 @@ def lookup_paper(query: str) -> Dict[str, Any]:
 
 
 @tool
-def check_experiment_status(paper_title: str) -> Dict[str, Any]:
-    """
-    Check the status of a local machine learning experiment by searching log files 
-    in the 'experiments/' directory. The tool matches log filenames containing keywords 
-    from the paper title (e.g., 'diffusion', 'vit'). Returns structured status info.
+def check_experiment_status_rag(query: str) -> Dict[str, Any]:
+    """RGA版本的实验状态检查"""
+    rag_system = ExperimentRAG(Path("../experiments"))
+    relevant_docs = rag_system.retrieve(query)
     
-    Args:
-        paper_title (str): Title or keywords of the paper associated with the experiment.
-        
-    Returns:
-        Dict[str, Any]: A dictionary containing either:
-            - 'filename', 'status', 'recent_output', etc. (if found)
-            - 'error' (if not found or read failed)
-    """
-    if not paper_title.strip():
-        return {
-            "error": "Missing required argument: 'paper_title'"
-        }
-
-    # 确定日志目录（相对于项目根目录）
-    log_dir_info = check_log_dir()
-    if not log_dir_info['exists']:
-        return {
-            "error": f"Log directory does not exist: {log_dir_info['absolute_path']}"
-        }
-
-    log_dir = Path(log_dir_info['absolute_path'])
-    log_dir.mkdir(parents=True, exist_ok=True)
-
-    # 构建通配符模式：支持多关键词（如 "diffusion models" → *diffusion*models*）
-    normalized = "".join(c if c.isalnum() or c.isspace() else "" for c in paper_title)
-    keywords = normalized.split()
-    pattern_str = "*".join(keywords)
-    pattern = log_dir / f"*{pattern_str}*.log"
-
-    log_files = glob.glob(str(pattern))
-
-    # 宽松匹配：逐个关键词尝试
-    if not log_files:
-        for kw in keywords:
-            pattern = log_dir / f"*{kw}*.log"
-            log_files = glob.glob(str(pattern))
-            if log_files:
-                break
-
-    if not log_files:
-        return {
-            "error": f"No experiment logs found for '{paper_title}' in directory: {log_dir}",
-            "directory": str(log_dir),
-            "keywords_tried": keywords
-        }
-
-    latest_log = max(log_files, key=os.path.getmtime)
-
-    # 读取日志内容
-    try:
-        with open(latest_log, 'r', encoding='utf-8', errors='ignore') as f:
-            lines = f.readlines()
-
-        last_lines = lines[-10:] if len(lines) >= 10 else lines
-        last_content = "".join(last_lines)
-        last_content_lower = last_content.lower()
-
-        # 判断状态
-        if "training completed" in last_content_lower or "final accuracy" in last_content_lower:
-            status = "✅ COMPLETED"
-        elif "error" in last_content_lower or "exception" in last_content_lower:
-            status = "❌ FAILED"
-        else:
-            status = "🔄 RUNNING"
-
-        snippet = last_content.strip()[-300:]
-        dt = datetime.fromtimestamp(os.path.getmtime(latest_log)).strftime("%Y-%m-%d %H:%M")
-
-        return {
-            "filename": os.path.basename(latest_log),
-            "last_modified": dt,
-            "status": status,
-            "location": str(latest_log),
-            "recent_output": snippet
-        }
-
-    except Exception as e:
-        return {
-            "error": f"Failed to read log file: {str(e)}"
-        }
+    if not relevant_docs:
+        return {"error": f"No relevant experiments found for query: '{query}'"}
+    
+    # 格式化检索结果作为上下文
+    context = ""
+    for doc in relevant_docs[:2]:  # 取最相关的2个
+        context += f"File: {doc['document']['filename']}\n"
+        context += f"Last modified: {doc['document']['last_modified']}\n"
+        context += f"Content snippet: {doc['document']['content'][-500:]}\n\n"
+    
+    return {"retrieved_context": context, "sources": [d['document']['filename'] for d in relevant_docs]}

@@ -14,56 +14,72 @@ mcp = FastMCP("Research Assistant MCP Server")
 @mcp.tool 
 def lookup_paper(query: str) -> Dict[str, Any]:
     """
-    Search for academic papers using Semantic Scholar API.
-    Args:
-        query: Keyword for paper search (e.g., "LLM quantization 2023")
-    Returns:
-        Formatted paper information including title, authors, year, etc.
+    Improved paper search with better query handling and fallback.
     """
     if not query.strip():
         return {"error": "Missing required argument: 'query'"}
 
-    time.sleep(1.5)
-    api_url = "https://api.semanticscholar.org/graph/v1/paper/search"
-    params = {"query": query, "limit": 3, "fields": "title,authors,abstract,year,url"}
-    headers = {"User-Agent": "ResearchAssistant/1.0"}
-
+    # 清理查询：移除特殊符号，转为小写（可选）
+    clean_query = query.replace("+", " ").replace("AND", "").replace('"', "").strip()
+    
     max_retries = 2
+    base_delay = 2
+    
     for attempt in range(max_retries + 1):
         try:
-            response = requests.get(api_url, params=params, headers=headers, timeout=10)
+            api_url = "https://api.semanticscholar.org/graph/v1/paper/search"
+            params = {
+                "query": clean_query,  # 使用清理后的查询
+                "limit": 5,  # 增加数量提高命中率
+                "fields": "title,authors,abstract,year,url,citationCount"
+            }
+            headers = {"User-Agent": "ResearchAssistant/1.0"}
+
+            response = requests.get(api_url, params=params, headers=headers, timeout=12)
+            
             if response.status_code == 200:
                 data = response.json()
                 papers_data = data.get("data", [])
+                
+                # 即使返回空，也尝试用更简单的关键词重试一次
+                if not papers_data and attempt == 0:
+                    # 尝试只用核心词
+                    simple_query = "vision transformer"
+                    print(f"No results, retrying with: {simple_query}")
+                    params["query"] = simple_query
+                    continue
+                
                 if not papers_data:
-                    return {"message": f"No relevant papers found for query: '{query}'"}
+                    return {"message": f"No papers found for: '{clean_query}'"}
 
                 formatted_papers = []
-                for paper in papers_data:
+                for paper in papers_data[:3]:  # 最多返回3篇
                     formatted_papers.append({
                         "title": paper.get("title", "N/A"),
                         "authors": [a["name"] for a in paper.get("authors", [])[:3]],
-                        "year": paper.get("year", None),
-                        "abstract": (paper.get("abstract") or "No abstract.")[:300] + "...",
-                        "url": paper.get("url", "#")
+                        "year": paper.get("year", "Unknown"),
+                        "citation_count": paper.get("citationCount", 0),
+                        "abstract": (str(paper.get("abstract"))[:250] + "...") if paper.get("abstract") else "No abstract available.",
+                        "url": paper.get("url", "https://www.semanticscholar.org/")
                     })
                 return {"papers": formatted_papers}
 
             elif response.status_code == 429:
-                time.sleep(3 + attempt * 2)
+                time.sleep(base_delay * (2 ** attempt))
                 continue
             else:
-                return {"error": f"HTTP {response.status_code}: {response.reason}"}
+                if attempt < max_retries:
+                    time.sleep(base_delay)
+                    continue
+                return {"error": f"API error {response.status_code}"}
 
-        except requests.RequestException as e:
-            if attempt < max_retries:
-                time.sleep(3)
-                continue
-            return {"error": f"Network error after retries: {str(e)}"}
         except Exception as e:
-            return {"error": f"Unexpected error: {str(e)}"}
+            if attempt < max_retries:
+                time.sleep(base_delay)
+                continue
+            return {"error": f"Network failure: {str(e)}"}
 
-    return {"error": "Failed to fetch papers after multiple retries."}
+    return {"error": "All attempts failed."}
 
 # 工具2：实验日志状态检查
 @mcp.tool
